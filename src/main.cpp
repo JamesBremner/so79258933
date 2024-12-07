@@ -5,30 +5,35 @@
 #include <vector>
 #include <algorithm>
 
+///////////////////// data structure ///////////////////
+
 typedef std::string element_t;
 
 typedef std::vector<element_t> group_t;
 
 typedef std::vector<group_t> version_t;
 
-version_t v1, v2;
-
+// An edit distance between two groups
 struct sEditDist
 {
-    int iv1;
-    int iv2;
-    int dist;
+    int iv1;  // zero-based index to group in first version
+    int iv2;  // zero-based index to group in second version
+    int dist; // count of insertions and deletion needs to reach 2nd group from first
 
-    void display()
-    {
-        std::cout << iv1 << " " << iv2 << " " << dist << "\n";
-    }
+    void display();
 };
 
 typedef std::vector<sEditDist> vEdits_t;
 
-// optimal connections
+//////////////////////// Globals //////////////////////////
+
+// the versions
+version_t v1, v2;
+
+// the optimal connections
 vEdits_t vConnections;
+
+////////////////////// methods //////////////////////////////
 
 /// @brief generate example from stackoverflow question
 /// @return
@@ -56,23 +61,34 @@ int editDistance(
     const group_t &g1,
     const group_t &g2)
 {
+    /* Do a linear search through a possible mapping between version 1 and 2 groups
+    calculating the edit distance ( number of insertions and deletions reuired ) between them.
+
+    This is the bottleneck.  It is blindingly fast for a few elements 
+    O(N) where N is the number of elements ( element present in both versions counts for 2 )
+    When there are more than ~100,000 elements this might drag a bit.
+
+    TODO: This can be optimised by sorting the members of each group and doing a binary search
+
+    */
     int dist = 0;
     for (auto &e : g1)
     {
         auto it = std::find(g2.begin(), g2.end(), e);
         if (it == g2.end())
-            dist++;
+            dist++; // element needs to be added to first group
     }
     for (auto &e : g2)
     {
         auto it = std::find(g1.begin(), g1.end(), e);
         if (it == g1.end())
-            dist++;
+            dist++; // element needs to be deleted from first group
     }
     return dist;
 }
-/// @brief calculate edit distances between every pair of groups in the versions
-void editDistance()
+
+/// @brief connect v1 groups to v2 groups, mimimizing the total edit distance
+void Connect()
 {
     sEditDist ed;
     for (ed.iv1 = 0; ed.iv1 < v1.size(); ed.iv1++)
@@ -88,7 +104,8 @@ void editDistance()
             ed.display();
 
             // keep the smallest edit distance
-            if( ed.dist < bestDist) {
+            if (ed.dist < bestDist)
+            {
                 bestDist = ed.dist;
                 bestv2 = ed.iv2;
             }
@@ -99,16 +116,29 @@ void editDistance()
         vConnections.push_back(ed);
     }
 }
-void editDistanceDisplay()
+void ConnectDisplay()
 {
+    std::cout << "\nOptimal mapping between versions\n";
     for (auto &d : vConnections)
         d.display();
 }
 
+void sEditDist::display()
+{
+    std::cout << iv1 << " -> " << iv2 << ", dist = " << dist << "\n";
+}
+
+/////////////// Main //////////////////////
+
 main()
 {
+    // generate problem
     gen1();
-    editDistance();
-    editDistanceDisplay();
+
+    // make connections
+    Connect();
+
+    // display result
+    ConnectDisplay();
     return 0;
 }
